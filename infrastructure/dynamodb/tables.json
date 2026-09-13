@@ -1,0 +1,28 @@
+{
+  "Tables": [
+    {
+      "TableName": "OpportunityOS_Students",
+      "KeySchema": [{ "AttributeName": "student_id", "KeyType": "HASH" }],
+      "AttributeDefinitions": [{ "AttributeName": "student_id", "AttributeType": "S" }],
+      "BillingMode": "PAY_PER_REQUEST"
+    },
+    {
+      "TableName": "OpportunityOS_Opportunities",
+      "KeySchema": [{ "AttributeName": "opportunity_id", "KeyType": "HASH" }],
+      "AttributeDefinitions": [{ "AttributeName": "opportunity_id", "AttributeType": "S" }],
+      "BillingMode": "PAY_PER_REQUEST"
+    },
+    {
+      "TableName": "OpportunityOS_Applications",
+      "KeySchema": [{ "AttributeName": "application_id", "KeyType": "HASH" }],
+      "AttributeDefinitions": [{ "AttributeName": "application_id", "AttributeType": "S" }],
+      "BillingMode": "PAY_PER_REQUEST"
+    },
+    {
+      "TableName": "OpportunityOS_Documents",
+      "KeySchema": [{ "AttributeName": "document_id", "KeyType": "HASH" }],
+      "AttributeDefinitions": [{ "AttributeName": "document_id", "AttributeType": "S" }],
+      "BillingMode": "PAY_PER_REQUEST"
+    }
+  ]
+}

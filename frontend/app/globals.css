@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #090d16;
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(66, 245, 227, 0.45);
+  box-shadow: 0 0 25px -5px rgba(66, 245, 227, 0.25);
+  transform: translateY(-2px);
+}
+
+.aqua-glow-border {
+  border-color: rgba(66, 245, 227, 0.5);
+  box-shadow: 0 0 20px rgba(66, 245, 227, 0.2);
+}
+
+.bg-aqua-gradient {
+  background: linear-gradient(135deg, rgba(66, 245, 227, 0.2) 0%, rgba(24, 230, 210, 0.05) 100%);
+}
+
+.text-gradient-aqua {
+  background: linear-gradient(135deg, #42f5e3 0%, #7ef8eb 50%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom selection */
+::selection {
+  background: rgba(66, 245, 227, 0.3);
+  color: #ffffff;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(66, 245, 227, 0.4);
+}
