@@ -20,9 +20,24 @@ OpportunityOS is built with real backend logic, AWS service drivers, determinist
 ### 🌟 Core Capabilities
 - 📡 **Live Opportunity Discovery & Connectors**: Live RSS and REST API connectors harvesting opportunities (Devpost, Amazon Careers, Google Student Portal, LFX Mentorship).
 - 🔑 **SHA-256 Canonical Deduplication Engine**: Prevents redundant listings across web portals using standard URL cleaning and string normalization:
-  $$\text{canonical\_id} = \text{OPP-} + \text{SHA256}(\text{clean\_url} \parallel \text{normalized\_org} \parallel \text{normalized\_title})[:16]$$
+
+  **Canonical ID:**
+
+  `OPP-` + `SHA256(clean_url || normalized_org || normalized_title)[:16]`
+
+  > The canonical ID is generated from the cleaned URL, normalized organization name, and normalized opportunity title using SHA-256 hashing.
+
 - 🎯 **Deterministic 5-Factor Match Engine**: Multi-dimensional scoring evaluating Eligibility, Requirements, Skills, Deadline Urgency, and Value:
-  $$\text{Match Score} = 0.35 E + 0.25 R + 0.15 S + 0.15 U + 0.10 V$$
+
+  **Match Score:**
+
+  `0.35E + 0.25R + 0.15S + 0.15U + 0.10V`
+
+  - **E** = Eligibility
+  - **R** = Requirements / Career Relevance
+  - **S** = Skills
+  - **U** = Deadline Urgency
+  - **V** = Opportunity Value
 - 🔐 **Amazon Cognito Authentication**: Cognito serves as the authoritative identity provider, while FastAPI validates Cognito-issued JWTs using JWKS (`/.well-known/jwks.json`). The application additionally uses PBKDF2-SHA256 for locally managed recovery-code protection, rate limiting, and MFA-related security controls.
 - 🗄️ **Multi-Tenant AWS Persistence & Storage**: AWS DynamoDB and S3 document vault persistence layers with pre-signed GET URLs, paired with a transparent offline development mode.
 - 📂 **Native Device File Uploader**: Interactive client-side document uploader with drag-and-drop dropzone, automatic filename extraction, category detection (`RESUME`, `TRANSCRIPT`, `CERTIFICATE`, `RECOMMENDATION`), and local blob preview URLs.
@@ -90,36 +105,36 @@ OpportunityOS features a dark glassmorphic interface styled with **Electric Aqua
 
 ```mermaid
 flowchart TD
-    User([Student / Client User]) -->|Upload Device File / Sign Up| Frontend[Next.js 14 Frontend]
-    Frontend -->|Cognito JWT Auth| API[FastAPI Backend Core]
+    User["Student / Client User"] -->|Upload Device File / Sign Up| Frontend["Next.js 14 Frontend"]
+    Frontend -->|Cognito JWT Auth| API["FastAPI Backend Core"]
     
     subgraph Connectors & Deduplication
-        API --> RSS[Devpost RSS & Live Connectors]
-        RSS --> Dedup[Deduplication Agent]
-        Dedup -->|SHA-256 Canonical Hashing| CanonicalIDs["OPP-sha256[:16]"]
+        API --> RSS["Devpost RSS & Live Connectors"]
+        RSS --> Dedup["Deduplication Agent"]
+        Dedup -->|SHA-256 Canonical Hashing| CanonicalIDs["OPP-{SHA256[:16]}"]
     end
 
     subgraph Intelligence & Scoring
-        CanonicalIDs --> ScoreEngine[5-Factor Match Engine]
-        ScoreEngine -->|0.35E + 0.25R + 0.15S + 0.15U + 0.10V| ScoredOpps[Scored Opportunities]
+        CanonicalIDs --> ScoreEngine["5-Factor Match Engine"]
+        ScoreEngine -->|0.35E + 0.25R + 0.15S + 0.15U + 0.10V| ScoredOpps["Scored Opportunities"]
     end
 
     subgraph AI Grounding & Execution
-        ScoredOpps --> AppAgent[Grounded AI Application Agent]
-        AppAgent -->|Grounding Check| Vault[S3 / Document Vault]
-        AppAgent -->|Draft Answers & Form Fill| PrepState[Needs Review Stage]
+        ScoredOpps --> AppAgent["Grounded AI Application Agent"]
+        AppAgent -->|Grounding Check| Vault["S3 / Document Vault"]
+        AppAgent -->|Draft Answers & Form Fill| PrepState["Needs Review Stage"]
     end
 
     subgraph Security & Verification
-        PrepState --> Guard{Human Approval Guard}
-        Guard -->|is_approved == False| Block[HTTP 400 Rejection]
-        Guard -->|is_approved == True| Submit[Application Submission]
+        PrepState --> Guard{"Human Approval Guard"}
+        Guard -->|is_approved == False| Block["HTTP 400 Rejection"]
+        Guard -->|is_approved == True| Submit["Application Submission"]
     end
 
     subgraph AWS Persistence & Monitoring
-        API --> DynamoDB[(Amazon DynamoDB Tables)]
-        API --> S3[(Amazon S3 Vault)]
-        API --> SSE[Real-time SSE Stream / CloudWatch Metrics]
+        API --> DynamoDB[("Amazon DynamoDB Tables")]
+        API --> S3[("Amazon S3 Vault")]
+        API --> SSE["Real-time SSE Stream / CloudWatch Metrics"]
     end
 ```
 
