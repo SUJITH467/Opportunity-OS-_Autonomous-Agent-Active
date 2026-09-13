@@ -3,7 +3,7 @@
 > **Existing platforms help students FIND opportunities. OpportunityOS helps students MOVE opportunities from discovery to completion.**
 
 ![Theme Accent](https://img.shields.io/badge/Theme-Electric%20Aqua%20%2342f5e3-00f2fe?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Production%20Ready%20Working%20Product-brightgreen?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Production--Grade%20Working%20Application-brightgreen?style=for-the-badge)
 ![Architecture](https://img.shields.io/badge/Architecture-AWS%20Multi--Agent%20System-blueviolet?style=for-the-badge)
 ![Security](https://img.shields.io/badge/Security-Cognito%20JWKS%20%2B%20Human--in--the--Loop-orange?style=for-the-badge)
 ![Frontend](https://img.shields.io/badge/Frontend-Next.js%2014%20(App%20Router)-black?style=for-the-badge)
@@ -15,7 +15,7 @@ OpportunityOS is an autonomous, production-ready AI opportunity execution platfo
 
 ## 🚀 Key Production Capabilities
 
-OpportunityOS is built with real backend logic, AWS service drivers, deterministic scoring algorithms, cryptographic deduplication hashing, NIST-compliant password security, and multi-tenant persistence layers.
+OpportunityOS is built with real backend logic, AWS service drivers, deterministic scoring algorithms, cryptographic deduplication hashing, NIST-compliant security controls, and multi-tenant persistence layers.
 
 ### 🌟 Core Capabilities
 - 📡 **Live Opportunity Discovery & Connectors**: Live RSS and REST API connectors harvesting opportunities (Devpost, Amazon Careers, Google Student Portal, LFX Mentorship).
@@ -23,12 +23,43 @@ OpportunityOS is built with real backend logic, AWS service drivers, determinist
   $$\text{canonical\_id} = \text{"OPP-"} + \text{SHA256}(\text{clean\_url} \parallel \text{normalized\_org} \parallel \text{normalized\_title})[:16]$$
 - 🎯 **Deterministic 5-Factor Match Engine**: Multi-dimensional scoring evaluating Eligibility, Requirements, Skills, Deadline Urgency, and Value:
   $$\text{Match Score} = 0.35 E + 0.25 R + 0.15 S + 0.15 U + 0.10 V$$
-- 🔐 **Amazon Cognito JWKS & NIST Authentication**: Production JWT validation via Cognito RSA Public Keys (`/.well-known/jwks.json`) with `user_id` claim extraction, NIST-compliant PBKDF2 SHA-256 password hashing, anti-abuse rate-limiting, 256-bit CSPRNG recovery codes, and gated MFA verification.
-- 🗄️ **Multi-Tenant AWS DynamoDB & S3 Vault**: Persistence layer with dual-mode storage (`OpportunityOS_Students`, `OpportunityOS_Opportunities`, `OpportunityOS_Applications`, `OpportunityOS_Documents`, `OpportunityOS_AgentActivity`) and S3 pre-signed GET URLs, with transparent local fallback.
+- 🔐 **Amazon Cognito Authentication**: Cognito serves as the authoritative identity provider, while FastAPI validates Cognito-issued JWTs using JWKS (`/.well-known/jwks.json`). The application additionally uses PBKDF2-SHA256 for locally managed recovery-code protection, rate limiting, and MFA-related security controls.
+- 🗄️ **Multi-Tenant AWS Persistence & Storage**: AWS DynamoDB and S3 document vault persistence layers with pre-signed GET URLs, paired with a transparent offline development mode.
 - 📂 **Native Device File Uploader**: Interactive client-side document uploader with drag-and-drop dropzone, automatic filename extraction, category detection (`RESUME`, `TRANSCRIPT`, `CERTIFICATE`, `RECOMMENDATION`), and local blob preview URLs.
 - 🧠 **Grounded AI Answer Generation**: Bedrock AI reasoning engine generating essay answers and application responses grounded strictly in the student's verified profile and document vault (citing `sources_used`).
 - 🛡️ **Backend Human Approval Guardrail**: Hardened backend security (`POST /api/applications/{id}/submit`) returning `HTTP 400 Bad Request` if `is_approved` is `False`.
 - 📡 **Real-Time Agent SSE Stream & CloudWatch**: Live Server-Sent Events endpoint (`GET /api/agent/events/stream`) and Amazon CloudWatch metric publisher (`PutMetricData`).
+
+---
+
+## 🤖 Agent Architecture
+
+OpportunityOS uses specialized AI agents orchestrated to coordinate the complete opportunity execution lifecycle:
+
+```text
+Discovery Agent
+      ↓
+Verification Agent
+      ↓
+Deduplication Agent
+      ↓
+Eligibility & Ranking Agent
+      ↓
+Application Preparation Agent
+      ↓
+Human Approval Guardrail
+      ↓
+Browser Automation / Submission Agent
+```
+
+### Multi-Agent Component Breakdown
+- 🔎 **Discovery Agent**: Connects to external developer portals, career endpoints, and RSS feeds to ingest raw opportunity listings.
+- 🛡️ **Verification Agent**: Validates portal readiness, active deadlines, and canonical link integrity before processing.
+- 🔑 **Deduplication Agent**: Generates deterministic SHA-256 canonical identifiers (`OPP-<sha256[:16]>`) to eliminate duplicate cross-portal listings.
+- 🧠 **Eligibility & Ranking Agent**: Computes the deterministic 5-factor match score combining student academic metrics, skill sets, deadline urgency, and opportunity value.
+- 📄 **Application Preparation Agent**: Synthesizes grounded application responses and essay answers from the student's profile and S3 document vault using AWS Bedrock.
+- 🛡️ **Human Approval Guardrail**: Hardened backend security gate enforcing mandatory explicit user approval before any application can transition to submission.
+- 🌐 **Browser Automation Agent**: Maps portal form fields, fills structured user details, and stages application state for final submission.
 
 ---
 
@@ -126,7 +157,7 @@ dev hack/
 │   ├── app/                      # Backend Core Package
 │   │   ├── main.py               # Server Entrypoint & CORS Setup
 │   │   ├── api/                  # REST API Endpoints
-│   │   │   ├── auth.py           # NIST PBKDF2 Hashing, Login, Signup & MFA Recovery
+│   │   │   ├── auth.py           # Login, Signup, PBKDF2 Recovery & MFA Gating
 │   │   │   ├── cognito_verifier.py # Cognito JWKS RSA Key Verification
 │   │   │   ├── opportunities.py  # Opportunity Discovery & Search
 │   │   │   ├── profile.py        # Student Profile & Skill API
@@ -134,8 +165,14 @@ dev hack/
 │   │   │   ├── applications.py   # Application Pipeline & Guardrails
 │   │   │   └── agent.py          # Real-time SSE Stream & Execution APIs
 │   │   ├── agents/               # Multi-Agent Modules
-│   │   │   ├── deduplication_agent.py # SHA-256 Hashing Engine
-│   │   │   └── application_agent.py   # Grounded AI Essay Synthesis
+│   │   │   ├── discovery_agent.py    # Opportunity Portal Connector Agent
+│   │   │   ├── verification_agent.py # Link & Portal Integrity Agent
+│   │   │   ├── deduplication_agent.py # SHA-256 Canonical Hashing Engine
+│   │   │   ├── eligibility_agent.py   # Student Eligibility Checker
+│   │   │   ├── ranking_agent.py       # 5-Factor Score Calculation
+│   │   │   ├── application_agent.py   # Grounded AI Essay Synthesis
+│   │   │   ├── browser_agent.py       # Browser Automation & Form Mapper
+│   │   │   └── agent_orchestrator.py  # Multi-Agent Pipeline Coordinator
 │   │   ├── repositories/         # Storage Layer
 │   │   │   └── database.py       # DynamoDB Multi-Tenant Driver & JSON Fallback
 │   │   ├── services/             # Service Drivers
@@ -214,13 +251,12 @@ Expected Output:
 
 ## 🔐 AWS Environment Configuration
 
-To switch from local fallback mode to **live AWS Cloud Infrastructure**, create a `.env` file in `backend/`:
+To configure environment settings for AWS cloud services, create a `.env` file in `backend/`:
 
 ```env
-# AWS Credentials & Region
+# AWS Region & Environment
 AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXX
-AWS_SECRET_ACCESS_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ENVIRONMENT=development
 
 # Amazon Cognito Authentication
 COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
@@ -234,18 +270,18 @@ S3_BUCKET_NAME=opportunity-os-documents-vault
 CLOUDWATCH_LOG_GROUP=/opportunity-os/agent-events
 ```
 
+> **Note on Production Credentials**: For production deployments, use an IAM role attached to the compute environment (e.g. AWS App Runner, ECS Task Role, or EC2 Instance Profile) rather than long-lived static AWS access keys.
+
 ---
 
-## ⚠️ Operational Note: Local Verification vs. AWS Deployment
+## ⚠️ Operational Modes & Verification Status
 
-- **Verified via Local Test Automation**:
-  - Code compilation & syntax verification across 15/15 Next.js pages and FastAPI routers.
-  - Deterministic 5-factor scoring math and SHA-256 deduplication canonical hashing (`OPP-<sha256[:16]>`).
-  - Backend human approval guardrail enforcing HTTP 400 status codes when `is_approved` is `False`.
-  - NIST-compliant PBKDF2 password hashing, rate-limiting anti-abuse protection, and 256-bit CSPRNG recovery code generation.
-- **Live AWS Operational Execution**:
-  - Requires valid AWS credentials and provisioned cloud resources (Cognito User Pool, DynamoDB Tables, S3 Bucket, Bedrock Model access).
-  - System automatically transitions from local fallback stores to live AWS SDK APIs when environment variables are supplied.
+- **Development Mode**: Local fallback storage and simulated credentials may be used for offline development and testing.
+- **Production Mode**: AWS services are mandatory. When `ENVIRONMENT=production`, the application requires Cognito, DynamoDB, S3, and configured AWS resources, and fails closed if required infrastructure is unavailable.
+
+### Verification Status
+- **Local Application Verification Complete**: All 15 Next.js App Router pages and FastAPI backend routers are compiled, linted, and verified via automated test suites (12/12 Pytest tests passing).
+- **AWS Cloud Deployment**: Local application verification is complete. Live AWS end-to-end deployment and validation are required before claiming full production deployment.
 
 ---
 
@@ -253,8 +289,8 @@ CLOUDWATCH_LOG_GROUP=/opportunity-os/agent-events
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/auth/signup` | Register student with NIST PBKDF2 password hashing & recovery codes |
-| `POST` | `/api/auth/login` | Rate-limited login endpoint issuing Cognito-structured JWTs |
+| `POST` | `/api/auth/signup` | Register student profile and generate recovery code entropy blocks |
+| `POST` | `/api/auth/login` | Authenticate through Amazon Cognito and validate/use Cognito-issued access tokens |
 | `POST` | `/api/auth/mfa/verify` | Verify MFA authentication code (with dev mode OTP gate) |
 | `GET` | `/api/auth/recovery-codes` | Generate 256-bit CSPRNG entropy recovery blocks |
 | `GET` | `/api/auth/me` | Fetch verified profile of currently authenticated user |
