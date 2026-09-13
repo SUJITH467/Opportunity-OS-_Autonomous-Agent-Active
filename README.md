@@ -20,7 +20,7 @@ OpportunityOS is built with real backend logic, AWS service drivers, determinist
 ### 🌟 Core Capabilities
 - 📡 **Live Opportunity Discovery & Connectors**: Live RSS and REST API connectors harvesting opportunities (Devpost, Amazon Careers, Google Student Portal, LFX Mentorship).
 - 🔑 **SHA-256 Canonical Deduplication Engine**: Prevents redundant listings across web portals using standard URL cleaning and string normalization:
-  $$\text{canonical\_id} = \text{"OPP-"} + \text{SHA256}(\text{clean\_url} \parallel \text{normalized\_org} \parallel \text{normalized\_title})[:16]$$
+  $$\text{canonical\_id} = \text{OPP-} + \text{SHA256}(\text{clean\_url} \parallel \text{normalized\_org} \parallel \text{normalized\_title})[:16]$$
 - 🎯 **Deterministic 5-Factor Match Engine**: Multi-dimensional scoring evaluating Eligibility, Requirements, Skills, Deadline Urgency, and Value:
   $$\text{Match Score} = 0.35 E + 0.25 R + 0.15 S + 0.15 U + 0.10 V$$
 - 🔐 **Amazon Cognito Authentication**: Cognito serves as the authoritative identity provider, while FastAPI validates Cognito-issued JWTs using JWKS (`/.well-known/jwks.json`). The application additionally uses PBKDF2-SHA256 for locally managed recovery-code protection, rate limiting, and MFA-related security controls.
@@ -96,7 +96,7 @@ flowchart TD
     subgraph Connectors & Deduplication
         API --> RSS[Devpost RSS & Live Connectors]
         RSS --> Dedup[Deduplication Agent]
-        Dedup -->|SHA-256 Canonical Hashing| CanonicalIDs[OPP-sha256[:16]]
+        Dedup -->|SHA-256 Canonical Hashing| CanonicalIDs["OPP-sha256[:16]"]
     end
 
     subgraph Intelligence & Scoring
