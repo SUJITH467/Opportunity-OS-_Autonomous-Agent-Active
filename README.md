@@ -1,6 +1,6 @@
 # OpportunityOS — Production Autonomous AI Agent Application for Student Opportunities
 
-> **Existing platforms help students FIND opportunities. OpportunityOS helps students MOVE opportunities from discovery to completion.**
+> **Existing platforms help students FIND opportunities. OpportunityOS helps students MOVE opportunities from discovery to completion .**
 
 ![Theme Accent](https://img.shields.io/badge/Theme-Electric%20Aqua%20%2342f5e3-00f2fe?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Production--Grade%20Working%20Application-brightgreen?style=for-the-badge)
