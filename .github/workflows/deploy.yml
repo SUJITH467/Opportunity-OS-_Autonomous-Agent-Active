@@ -1,71 +1,161 @@
-      - name: Diagnose AWS OIDC AssumeRole
-        env:
-          ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+name: OpportunityOS Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  validate-and-test:
+    name: Backend Test Suite & Health Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
         run: |
-          set -e
+          cd backend
+          pip install --no-cache-dir -r requirements.txt
 
-          echo "Requesting GitHub OIDC token for AWS..."
+      - name: Run Backend Pytest Suite
+        run: |
+          cd backend
+          python -m pytest tests/ -v
 
-          OIDC_RESPONSE=$(curl -sS \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
+      - name: Verify Health Check Endpoint Import
+        run: |
+          cd backend
+          python -c "from app.main import app; from fastapi.testclient import TestClient; c = TestClient(app); r = c.get('/health'); assert r.status_code == 200 and r.json()['status'] == 'healthy'; print('Health check verified successfully!')"
 
-          OIDC_TOKEN=$(echo "$OIDC_RESPONSE" | python -c "import sys,json; print(json.load(sys.stdin)['value'])")
+  deploy-bedrock-agentcore:
+    name: Deploy Bedrock AgentCore Runtime
+    needs: validate-and-test
+    runs-on: ubuntu-latest
 
-          export OIDC_TOKEN
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-          echo "Inspecting OIDC claims..."
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-          python - <<'PY'
-          import os
-          import json
-          import base64
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-          token = os.environ["OIDC_TOKEN"]
-          payload = token.split(".")[1]
-          payload += "=" * (-len(payload) % 4)
+      - name: Install Native Bedrock AgentCore CLI & Build Tools
+        run: |
+          pip install uv bedrock-agentcore strands-agents
+          npm install -g @aws/agentcore@0.29.0
+          cd agentcore/cdk
+          npm ci
+          npm run build
+          cd ../..
 
-          claims = json.loads(
-              base64.urlsafe_b64decode(payload).decode("utf-8")
-          )
+      - name: Validate Native AgentCore Configuration
+        run: |
+          agentcore validate
 
-          print("OIDC audience:")
-          print(claims.get("aud"))
+      - name: Configure AWS Credentials (IAM Role via OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
-          print("OIDC subject:")
-          print(claims.get("sub"))
+      - name: Verify AWS Identity
+        run: |
+          aws sts get-caller-identity
 
-          print("OIDC repository:")
-          print(claims.get("repository"))
+      - name: Verify AgentCore Status
+        run: |
+          agentcore status
 
-          print("OIDC repository_id:")
-          print(claims.get("repository_id"))
+      - name: Deploy Strands Agent to Bedrock AgentCore Runtime
+        run: |
+          agentcore deploy --yes --verbose
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
-          print("OIDC repository_owner_id:")
-          print(claims.get("repository_owner_id"))
+  deploy-lightsail:
+    name: Deploy to Lightsail Docker Host
+    needs: deploy-bedrock-agentcore
+    runs-on: ubuntu-latest
 
-          print("OIDC ref:")
-          print(claims.get("ref"))
-          PY
+    if: ${{ secrets.LIGHTSAIL_HOST != '' }}
 
-          echo "Testing AWS STS AssumeRoleWithWebIdentity..."
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-          aws sts assume-role-with-web-identity \
-            --role-arn "$ROLE_ARN" \
-            --role-session-name "github-oidc-diagnostic" \
-            --web-identity-token "$OIDC_TOKEN" \
-            --duration-seconds 900 \
-            > /tmp/sts-result.json
+      - name: Deploy to AWS Lightsail Host via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER || 'ubuntu' }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script_stop: true
+          envs: REQUIRE_HUMAN_APPROVAL,ENVIRONMENT,AWS_REGION,NEXT_PUBLIC_API_URL
+          script: |
+            set -e
 
-          echo "SUCCESS: AWS STS accepted the GitHub OIDC token."
+            APP_DIR="/opt/opportunityos"
 
-          python - <<'PY'
-          import json
+            sudo mkdir -p "${APP_DIR}"
+            sudo chown -R $USER:$USER "${APP_DIR}"
 
-          with open("/tmp/sts-result.json") as f:
-              data = json.load(f)
+            if [ -d "${APP_DIR}/.git" ]; then
+              cd "${APP_DIR}"
+              git fetch --all
+              git reset --hard origin/main || git reset --hard origin/master
+            else
+              git clone "${{ github.server_url }}/${{ github.repository }}.git" "${APP_DIR}"
+              cd "${APP_DIR}"
+            fi
 
-          print("AWS STS returned temporary credentials successfully.")
-          print("Credentials were NOT printed.")
-          print("Expiration:", data["Credentials"]["Expiration"])
-          PY
+            chmod +x ./scripts/deploy-lightsail.sh
+            ./scripts/deploy-lightsail.sh
+
+        env:
+          REQUIRE_HUMAN_APPROVAL: "true"
+          ENVIRONMENT: "production"
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api' }}
+
+      - name: External Health Check Verification
+        run: |
+          HOST="${{ secrets.LIGHTSAIL_HOST }}"
+
+          echo "Verifying external health status on Lightsail host: ${HOST}..."
+
+          for i in {1..12}; do
+            BACKEND_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://${HOST}:8000/health" || echo "000")
+            FRONTEND_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://${HOST}:3000/api/health" || echo "000")
+
+            echo "Attempt $i: Backend HTTP $BACKEND_CODE | Frontend HTTP $FRONTEND_CODE"
+
+            if [ "$BACKEND_CODE" = "200" ] && [ "$FRONTEND_CODE" = "200" ]; then
+              echo "External health check PASSED!"
+              exit 0
+            fi
+
+            sleep 5
+          done
+
+          echo "Health check failed after 60s."
+          exit 1
