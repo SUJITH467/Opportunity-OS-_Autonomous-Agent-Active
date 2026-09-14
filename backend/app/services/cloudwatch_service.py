@@ -11,23 +11,17 @@ class CloudWatchService:
         self.cw_client = None
         self.logs_client = None
 
-        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
-            try:
-                self.cw_client = boto3.client(
-                    "cloudwatch",
-                    region_name=settings.AWS_REGION,
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                )
-                self.logs_client = boto3.client(
-                    "logs",
-                    region_name=settings.AWS_REGION,
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                )
-                logger.info("AWS CloudWatch metrics and logs client initialized.")
-            except Exception as e:
-                logger.warning(f"Could not initialize AWS CloudWatch client: {e}")
+        try:
+            client_kwargs = {"region_name": settings.AWS_REGION}
+            if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+                client_kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
+                client_kwargs["aws_secret_access_key"] = settings.AWS_SECRET_ACCESS_KEY
+
+            self.cw_client = boto3.client("cloudwatch", **client_kwargs)
+            self.logs_client = boto3.client("logs", **client_kwargs)
+            logger.info("AWS CloudWatch metrics and logs client initialized (IAM role enabled).")
+        except Exception as e:
+            logger.warning(f"Could not initialize AWS CloudWatch client: {e}")
 
     def put_metric(self, metric_name: str, value: float, unit: str = "Count", dimensions: Optional[Dict[str, str]] = None):
         """Publish custom operational metric to CloudWatch."""

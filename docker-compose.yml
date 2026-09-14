@@ -1,3 +1,5 @@
+name: opportunityos
+
 version: '3.8'
 
 services:
@@ -5,21 +7,52 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - DEMO_MODE=True
-      - AWS_REGION=us-east-1
-    volumes:
-      - ./backend:/app
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DEMO_MODE=${DEMO_MODE:-False}
+      - REQUIRE_HUMAN_APPROVAL=true
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ROLE_ARN=${AWS_ROLE_ARN:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID:-}
+      - COGNITO_REGION=${COGNITO_REGION:-us-east-1}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-anthropic.claude-3-5-sonnet-20241022-v2:0}
+      - BEDROCK_EMBEDDING_MODEL_ID=${BEDROCK_EMBEDDING_MODEL_ID:-amazon.titan-embed-text-v2:0}
+      - DYNAMODB_STUDENTS_TABLE=${DYNAMODB_STUDENTS_TABLE:-OpportunityOS_Students}
+      - DYNAMODB_OPPORTUNITIES_TABLE=${DYNAMODB_OPPORTUNITIES_TABLE:-OpportunityOS_Opportunities}
+      - DYNAMODB_APPLICATIONS_TABLE=${DYNAMODB_APPLICATIONS_TABLE:-OpportunityOS_Applications}
+      - DYNAMODB_DOCUMENTS_TABLE=${DYNAMODB_DOCUMENTS_TABLE:-OpportunityOS_Documents}
+      - DYNAMODB_ACTIVITY_TABLE=${DYNAMODB_ACTIVITY_TABLE:-OpportunityOS_AgentActivity}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-opportunityos-student-documents-prod}
+      - CLOUDWATCH_LOG_GROUP=${CLOUDWATCH_LOG_GROUP:-/aws/opportunityos/production}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
+      - PORT=3000
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const http = require('http'); http.get('http://localhost:3000/api/health', (r) => { if (r.statusCode !== 200) process.exit(1); });\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

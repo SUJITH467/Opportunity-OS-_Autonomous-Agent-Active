@@ -19,22 +19,21 @@ class DynamoDBRepository:
         self.documents_table = None
         self.activity_table = None
 
-        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
-            try:
-                self.dynamodb = boto3.resource(
-                    "dynamodb",
-                    region_name=settings.AWS_REGION,
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
-                )
-                self.students_table = self.dynamodb.Table(settings.DYNAMODB_STUDENTS_TABLE)
-                self.opportunities_table = self.dynamodb.Table(settings.DYNAMODB_OPPORTUNITIES_TABLE)
-                self.applications_table = self.dynamodb.Table(settings.DYNAMODB_APPLICATIONS_TABLE)
-                self.documents_table = self.dynamodb.Table(settings.DYNAMODB_DOCUMENTS_TABLE)
-                self.activity_table = self.dynamodb.Table(settings.DYNAMODB_ACTIVITY_TABLE)
-                logger.info("Connected to AWS DynamoDB Production Tables.")
-            except Exception as e:
-                logger.warning(f"Could not connect to AWS DynamoDB: {e}. Falling back to local storage engine.")
+        try:
+            client_kwargs = {"region_name": settings.AWS_REGION}
+            if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+                client_kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
+                client_kwargs["aws_secret_access_key"] = settings.AWS_SECRET_ACCESS_KEY
+
+            self.dynamodb = boto3.resource("dynamodb", **client_kwargs)
+            self.students_table = self.dynamodb.Table(settings.DYNAMODB_STUDENTS_TABLE)
+            self.opportunities_table = self.dynamodb.Table(settings.DYNAMODB_OPPORTUNITIES_TABLE)
+            self.applications_table = self.dynamodb.Table(settings.DYNAMODB_APPLICATIONS_TABLE)
+            self.documents_table = self.dynamodb.Table(settings.DYNAMODB_DOCUMENTS_TABLE)
+            self.activity_table = self.dynamodb.Table(settings.DYNAMODB_ACTIVITY_TABLE)
+            logger.info("Connected to AWS DynamoDB Production Tables (IAM role enabled).")
+        except Exception as e:
+            logger.warning(f"Could not connect to AWS DynamoDB: {e}. Falling back to local storage engine.")
 
 class InMemoryStore:
     """Local JSON-backed persistent store for local development."""

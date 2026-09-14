@@ -9,17 +9,16 @@ logger = logging.getLogger("OpportunityOS.StorageService")
 class StorageService:
     def __init__(self):
         self.s3_client = None
-        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
-            try:
-                self.s3_client = boto3.client(
-                    "s3",
-                    region_name=settings.AWS_REGION,
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
-                )
-                logger.info(f"S3 Storage client initialized for bucket {settings.S3_BUCKET_NAME}")
-            except Exception as e:
-                logger.warning(f"S3 initialization failed: {e}. Falling back to local storage.")
+        try:
+            client_kwargs = {"region_name": settings.AWS_REGION}
+            if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+                client_kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
+                client_kwargs["aws_secret_access_key"] = settings.AWS_SECRET_ACCESS_KEY
+
+            self.s3_client = boto3.client("s3", **client_kwargs)
+            logger.info(f"S3 Storage client initialized for bucket {settings.S3_BUCKET_NAME} (IAM role enabled)")
+        except Exception as e:
+            logger.warning(f"S3 initialization failed: {e}. Falling back to local storage.")
 
     def upload_file(self, student_id: str, doc_category: str, filename: str, file_bytes: bytes) -> Tuple[str, str]:
         """Uploads document to S3 or local mock directory structure."""

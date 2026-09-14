@@ -21,6 +21,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+backend/*.egg-info/
 
 # Environment variables & secrets
 .env
@@ -40,3 +41,12 @@ yarn-error.log*
 # System files
 .DS_Store
 Thumbs.db
+
+# AgentCore build artifacts
+agentcore/cdk/node_modules/
+agentcore/cdk/cdk.out/
+agentcore/cdk/dist/
+agentcore/*.zip
+agentcore/.cli/
+agentcore/.cache/
+agentcore/.env.local

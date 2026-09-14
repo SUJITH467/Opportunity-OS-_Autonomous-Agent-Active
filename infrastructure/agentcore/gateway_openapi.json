@@ -1,0 +1,94 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "OpportunityOS AgentCore Gateway API",
+    "version": "1.0.0",
+    "description": "Gateway connectors interface for OpportunityOS discovery feeds, live verification, and ranking."
+  },
+  "paths": {
+    "/opportunities/discover": {
+      "post": {
+        "summary": "Discover live opportunities from external channels",
+        "description": "Scans configured opportunity feeds (Devpost, Careers, Scholarships) and returns structured listings.",
+        "operationId": "discoverOpportunities",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "keywords": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Keywords to filter opportunity discovery"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of discovered canonical opportunities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" },
+                    "count": { "type": "integer" },
+                    "opportunities": {
+                      "type": "array",
+                      "items": { "type": "object" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/opportunities/verify": {
+      "post": {
+        "summary": "Verify opportunity source authenticity and deadline validity",
+        "description": "Performs integrity checks on application URLs and deadlines.",
+        "operationId": "verifyOpportunities",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "opportunity_ids": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                },
+                "required": ["opportunity_ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification outcomes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "verified_count": { "type": "integer" },
+                    "status": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -11,19 +11,19 @@ logger = logging.getLogger("OpportunityOS.BedrockService")
 class BedrockService:
     def __init__(self):
         self.bedrock_client = None
-        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
-            try:
-                self.bedrock_client = boto3.client(
-                    service_name="bedrock-runtime",
-                    region_name=settings.AWS_REGION,
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
-                )
-                logger.info("Amazon Bedrock runtime client initialized successfully.")
-            except Exception as e:
-                logger.warning(f"Could not initialize Amazon Bedrock client: {e}. Falling back to deterministic AI engine.")
-        else:
-            logger.info("AWS Credentials not provided. Using OpportunityOS local AI Reasoning Engine.")
+        try:
+            client_kwargs = {"region_name": settings.AWS_REGION}
+            if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+                client_kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
+                client_kwargs["aws_secret_access_key"] = settings.AWS_SECRET_ACCESS_KEY
+
+            self.bedrock_client = boto3.client(
+                service_name="bedrock-runtime",
+                **client_kwargs
+            )
+            logger.info("Amazon Bedrock runtime client initialized successfully (IAM role / ambient credentials enabled).")
+        except Exception as e:
+            logger.warning(f"Could not initialize Amazon Bedrock client: {e}. Falling back to deterministic AI engine.")
 
     def invoke_model(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         """Invoke Amazon Bedrock foundation model (Claude 3.5 Sonnet / Titan) or deterministic fallback."""

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # Environment & Demo Mode
     DEMO_MODE: bool = os.getenv("DEMO_MODE", "False").lower() in ("true", "1", "t")
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    REQUIRE_HUMAN_APPROVAL: bool = os.getenv("REQUIRE_HUMAN_APPROVAL", "True").lower() in ("true", "1", "t")
     
     # Amazon Cognito Authentication
     COGNITO_USER_POOL_ID: Optional[str] = os.getenv("COGNITO_USER_POOL_ID", None)

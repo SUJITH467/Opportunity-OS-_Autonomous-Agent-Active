@@ -9,8 +9,8 @@
         "bedrock:InvokeModelWithResponseStream"
       ],
       "Resource": [
-        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
-        "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
+        "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0"
       ]
     },
     {
@@ -24,7 +24,7 @@
         "dynamodb:Scan",
         "dynamodb:Query"
       ],
-      "Resource": "arn:aws:dynamodb:us-east-1:*:table/OpportunityOS_*"
+      "Resource": "arn:aws:dynamodb:*:*:table/OpportunityOS_*"
     },
     {
       "Sid": "S3DocumentAccess",
@@ -35,6 +35,18 @@
         "s3:DeleteObject"
       ],
       "Resource": "arn:aws:s3:::opportunityos-student-documents-prod/*"
+    },
+    {
+      "Sid": "CloudWatchMetricsAndLogs",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricData",
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": "*"
     }
   ]
 }

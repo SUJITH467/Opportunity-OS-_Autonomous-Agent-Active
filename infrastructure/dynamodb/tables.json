@@ -23,6 +23,12 @@
       "KeySchema": [{ "AttributeName": "document_id", "KeyType": "HASH" }],
       "AttributeDefinitions": [{ "AttributeName": "document_id", "AttributeType": "S" }],
       "BillingMode": "PAY_PER_REQUEST"
+    },
+    {
+      "TableName": "OpportunityOS_AgentActivity",
+      "KeySchema": [{ "AttributeName": "activity_id", "KeyType": "HASH" }],
+      "AttributeDefinitions": [{ "AttributeName": "activity_id", "AttributeType": "S" }],
+      "BillingMode": "PAY_PER_REQUEST"
     }
   ]
 }

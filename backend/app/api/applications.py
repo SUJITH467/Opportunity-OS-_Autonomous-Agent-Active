@@ -6,6 +6,7 @@ from app.schemas.pydantic_models import UpdateApplicationAnswerRequest, ApproveA
 from app.repositories.database import repository
 from app.agents.agent_orchestrator import orchestrator
 from app.services.cloudwatch_service import cloudwatch_service
+from app.config import settings
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -86,7 +87,7 @@ def submit_application(application_id: str):
         raise HTTPException(status_code=404, detail="Application not found")
     
     # HARD BACKEND GUARDRAIL: Block submission if user hasn't explicitly approved
-    if not app.is_approved:
+    if settings.REQUIRE_HUMAN_APPROVAL and not app.is_approved:
         raise HTTPException(
             status_code=400,
             detail="HUMAN APPROVAL REQUIRED: Submission blocked by OpportunityOS Safety Guardrail. You must explicitly approve this application before dispatching."
