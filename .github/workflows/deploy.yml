@@ -84,6 +84,71 @@ jobs:
       # ========================================================
       # AWS OIDC AUTHENTICATION
       # ========================================================
+      - name: Direct AWS OIDC Diagnostic
+        env:
+          ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          set -e
+
+          echo "Requesting GitHub OIDC token for AWS STS..."
+
+          OIDC_RESPONSE=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
+
+          OIDC_TOKEN=$(echo "$OIDC_RESPONSE" | python -c "import sys,json; print(json.load(sys.stdin)['value'])")
+
+          export OIDC_TOKEN
+
+          python - <<'PY'
+          import os
+          import json
+          import base64
+
+          token = os.environ["OIDC_TOKEN"]
+          payload = token.split(".")[1]
+          payload += "=" * (-len(payload) % 4)
+
+          claims = json.loads(
+              base64.urlsafe_b64decode(payload).decode("utf-8")
+          )
+
+          print("================================")
+          print("GitHub OIDC CLAIMS")
+          print("================================")
+          print("aud:", claims.get("aud"))
+          print("sub:", claims.get("sub"))
+          print("repository:", claims.get("repository"))
+          print("repository_id:", claims.get("repository_id"))
+          print("repository_owner_id:", claims.get("repository_owner_id"))
+          print("ref:", claims.get("ref"))
+          print("================================")
+          PY
+
+          echo "Testing AWS STS directly..."
+
+          aws sts assume-role-with-web-identity \
+            --role-arn "$ROLE_ARN" \
+            --role-session-name "github-oidc-test" \
+            --web-identity-token "$OIDC_TOKEN" \
+            --duration-seconds 900 \
+            > /tmp/sts-result.json
+
+          echo "================================"
+          echo "SUCCESS: AWS STS ACCEPTED THE OIDC TOKEN"
+          echo "================================"
+
+          python - <<'PY'
+          import json
+
+          with open("/tmp/sts-result.json") as f:
+              data = json.load(f)
+
+          print("Temporary AWS credentials were received.")
+          print("Credentials are NOT being printed.")
+          print("Expiration:", data["Credentials"]["Expiration"])
+          PY
+
       - name: Configure AWS Credentials (IAM Role via OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
